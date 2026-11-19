@@ -152,10 +152,6 @@ function normalizeBarcode(code){
         .trim();
 }
 
-/* ------------------------------
-   OK音
------------------------------- */
-
 function playOK(){
 
     const ctx =
@@ -188,10 +184,6 @@ function playOK(){
     );
 }
 
-/* ------------------------------
-   NG音
------------------------------- */
-
 function playNG(){
 
     const ctx =
@@ -223,10 +215,6 @@ function playNG(){
         ctx.currentTime + 0.5
     );
 }
-
-/* ------------------------------
-   照合処理
------------------------------- */
 
 function checkMatch(){
 
@@ -297,10 +285,6 @@ function checkMatch(){
     }
 }
 
-/* ------------------------------
-   履歴
------------------------------- */
-
 function addHistory(
     result,
     scan1,
@@ -359,10 +343,6 @@ function renderHistory(){
     ).innerHTML = html;
 }
 
-/* ------------------------------
-   リセット
------------------------------- */
-
 function resetScan(){
 
     document.getElementById("scan1").value="";
@@ -381,10 +361,6 @@ function resetScan(){
 
     document.getElementById("scan1").focus();
 }
-
-/* ------------------------------
-   Bluetoothスキャナ
------------------------------- */
 
 window.onload = () => {
 
@@ -441,10 +417,6 @@ document.body.addEventListener(
 
 <script>
 
-/* ------------------------------
-   Service Worker登録
------------------------------- */
-
 if("serviceWorker" in navigator){
 
     window.addEventListener(
@@ -466,11 +438,8 @@ if("serviceWorker" in navigator){
             "Service Workerエラー",
             err
             );
-
         });
-
     });
-
 }
 
 </script>
