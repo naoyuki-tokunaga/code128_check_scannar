@@ -1,7 +1,6 @@
-const CACHE_NAME = "barcode-check-v3";
+const CACHE_NAME = "barcode-check-v4";
 
 const urlsToCache = [
-  "./",
   "./code128check.html",
   "./manifest.json",
   "./service-worker.js"
@@ -17,8 +16,6 @@ self.addEventListener("install", event => {
 self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request)
-      .then(response => {
-        return response || fetch(event.request);
-      })
+      .then(response => response || fetch(event.request))
   );
 });
