@@ -2,7 +2,7 @@ const CACHE_NAME = "barcode-check-v2";
 
 const urlsToCache = [
   "./",
-  "./index.html",
+  "./code128check.html",
   "./manifest.json",
   "./service-worker.js"
 ];
