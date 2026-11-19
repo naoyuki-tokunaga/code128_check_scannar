@@ -1,4 +1,4 @@
-const CACHE_NAME = "barcode-check-v4";
+const CACHE_NAME = "barcode-check-v1";
 
 const urlsToCache = [
   "./code128check.html",
