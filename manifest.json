@@ -1,7 +1,7 @@
 {
   "name": "バーコード照合",
   "short_name": "バーコード照合",
-  "start_url": "./",
+  "start_url": "./code128check.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4CAF50"
