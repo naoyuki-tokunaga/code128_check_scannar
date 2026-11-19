@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>バーコード照合</title>
+
+<style>
+body{
+    margin:0;
+    font-family:sans-serif;
+    text-align:center;
+    background:#f4f4f4;
+}
+
+h1{
+    margin-top:20px;
+}
+
+#scanInput{
+    position:absolute;
+    left:-9999px;
+}
+
+#status{
+    margin-top:50px;
+    font-size:40px;
+    font-weight:bold;
+}
+
+#message{
+    margin-top:20px;
+    font-size:28px;
+}
+
+.ok{
+    background:#22c55e;
+    color:white;
+}
+
+.ng{
+    background:#ef4444;
+    color:white;
+}
+
+.wait{
+    background:#f4f4f4;
+    color:black;
+}
+</style>
+</head>
+
+<body class="wait">
+
+<h1>バーコード照合</h1>
+
+<div id="status">待機中</div>
+<div id="message">Aを読み取ってください</div>
+
+<input id="scanInput" autofocus>
+
+<script>
+
+let barcodeA = "";
+const input = document.getElementById("scanInput");
+const status = document.getElementById("status");
+const message = document.getElementById("message");
+
+function focusInput(){
+    input.focus();
+}
+
+document.body.addEventListener("click", focusInput);
+window.addEventListener("load", focusInput);
+
+function playOK(){
+
+    const audioCtx =
+        new (window.AudioContext || window.webkitAudioContext)();
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.frequency.value = 1000;
+    osc.type = "sine";
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioCtx.currentTime + 0.15
+    );
+
+    osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function playNG(){
+
+    const audioCtx =
+        new (window.AudioContext || window.webkitAudioContext)();
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.frequency.value = 250;
+    osc.type = "sawtooth";
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioCtx.currentTime + 0.5
+    );
+
+    osc.stop(audioCtx.currentTime + 0.5);
+}
+
+function resetScreen(){
+
+    document.body.className = "wait";
+
+    status.textContent = "待機中";
+    message.textContent = "Aを読み取ってください";
+
+    barcodeA = "";
+
+    focusInput();
+}
+
+input.addEventListener("keydown", function(e){
+
+    if(e.key !== "Enter") return;
+
+    const code = input.value.trim();
+
+    input.value = "";
+
+    if(code === "") return;
+
+    if(barcodeA === ""){
+
+        barcodeA = code;
+
+        status.textContent = "A読取完了";
+        message.textContent = "Bを読み取ってください";
+
+        return;
+    }
+
+    const result = code.includes(barcodeA);
+
+    if(result){
+
+        document.body.className = "ok";
+
+        status.textContent = "OK";
+        message.textContent = "一致しました";
+
+        playOK();
+
+    }else{
+
+        document.body.className = "ng";
+
+        status.textContent = "NG";
+        message.textContent = "一致しません";
+
+        playNG();
+    }
+
+    setTimeout(resetScreen, 2000);
+
+});
+
+</script>
+
+</body>
+</html>
