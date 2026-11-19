@@ -2,185 +2,193 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>バーコード照合</title>
 
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="バーコード照合">
+
 <style>
+
 body{
-    margin:0;
     font-family:sans-serif;
+    background:#f5f5f5;
     text-align:center;
-    background:#f4f4f4;
+    padding:20px;
 }
 
-h1{
-    margin-top:20px;
+.box{
+    background:white;
+    border-radius:12px;
+    padding:20px;
+    margin:15px auto;
+    max-width:900px;
 }
 
-#scanInput{
-    position:absolute;
-    left:-9999px;
+input{
+    width:95%;
+    font-size:22px;
+    padding:10px;
+    text-align:center;
 }
 
-#status{
-    margin-top:50px;
-    font-size:40px;
+#result{
+    font-size:60px;
     font-weight:bold;
+    border-radius:12px;
+    padding:20px;
+    margin-top:20px;
 }
 
-#message{
-    margin-top:20px;
-    font-size:28px;
+.wait{
+    background:#ddd;
 }
 
 .ok{
-    background:#22c55e;
+    background:#4CAF50;
     color:white;
 }
 
 .ng{
-    background:#ef4444;
+    background:#E53935;
     color:white;
 }
 
-.wait{
-    background:#f4f4f4;
-    color:black;
+table{
+    width:100%;
+    border-collapse:collapse;
 }
+
+th,td{
+    border:1px solid #ccc;
+    padding:6px;
+    font-size:14px;
+}
+
 </style>
 </head>
 
-<body class="wait">
+<body>
 
 <h1>バーコード照合</h1>
 
-<div id="status">待機中</div>
-<div id="message">Aを読み取ってください</div>
+<div class="box">
 
-<input id="scanInput" autofocus>
+<h2>読取①</h2>
+
+<input
+id="scan1"
+autocomplete="off">
+
+</div>
+
+<div class="box">
+
+<h2>読取②</h2>
+
+<input
+id="scan2"
+autocomplete="off">
+
+</div>
+
+<div id="result" class="wait">
+
+読取待ち
+
+</div>
+
+<div class="box">
+
+<h2>履歴</h2>
+
+<div style="overflow-x:auto">
+
+<table id="historyTable">
+
+<tr>
+<th>時刻</th>
+<th>結果</th>
+<th>元①</th>
+<th>調整①</th>
+<th>元②</th>
+<th>調整②</th>
+</tr>
+
+</table>
+
+</div>
+
+</div>
 
 <script>
 
-let barcodeA = "";
-const input = document.getElementById("scanInput");
-const status = document.getElementById("status");
-const message = document.getElementById("message");
+let historyList=[];
 
-function focusInput(){
-    input.focus();
+/* ---------------------
+   バーコード加工
+--------------------- */
+
+function normalizeBarcode(code){
+
+    let original=String(code);
+
+    code=code
+    .replace(/\r/g,"")
+    .replace(/\n/g,"")
+    .replace(/\t/g,"")
+    .trim();
+
+    return{
+        original:original,
+        normalized:code
+    };
 }
 
-document.body.addEventListener("click", focusInput);
-window.addEventListener("load", focusInput);
+/* ---------------------
+   OK音
+--------------------- */
 
 function playOK(){
 
-    const audioCtx =
-        new (window.AudioContext || window.webkitAudioContext)();
+    const audioCtx=
+        new(window.AudioContext||
+             window.webkitAudioContext)();
 
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const osc=
+        audioCtx.createOscillator();
 
-    osc.frequency.value = 1000;
-    osc.type = "sine";
+    const gain=
+        audioCtx.createGain();
 
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        audioCtx.currentTime + 0.15
-    );
-
-    osc.stop(audioCtx.currentTime + 0.15);
-}
-
-function playNG(){
-
-    const audioCtx =
-        new (window.AudioContext || window.webkitAudioContext)();
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.frequency.value = 250;
-    osc.type = "sawtooth";
+    osc.frequency.value=1200;
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
-    osc.start();
-
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        audioCtx.currentTime + 0.5
+    gain.gain.setValueAtTime(
+        0.2,
+        audioCtx.currentTime
     );
 
-    osc.stop(audioCtx.currentTime + 0.5);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioCtx.currentTime+0.15
+    );
+
+    osc.start();
+
+    osc.stop(
+        audioCtx.currentTime+0.15
+    );
 }
 
-function resetScreen(){
+/* ---------------------
+   NG音
+--------------------- */
 
-    document.body.className = "wait";
-
-    status.textContent = "待機中";
-    message.textContent = "Aを読み取ってください";
-
-    barcodeA = "";
-
-    focusInput();
-}
-
-input.addEventListener("keydown", function(e){
-
-    if(e.key !== "Enter") return;
-
-    const code = input.value.trim();
-
-    input.value = "";
-
-    if(code === "") return;
-
-    if(barcodeA === ""){
-
-        barcodeA = code;
-
-        status.textContent = "A読取完了";
-        message.textContent = "Bを読み取ってください";
-
-        return;
-    }
-
-    const result = code.includes(barcodeA);
-
-    if(result){
-
-        document.body.className = "ok";
-
-        status.textContent = "OK";
-        message.textContent = "一致しました";
-
-        playOK();
-
-    }else{
-
-        document.body.className = "ng";
-
-        status.textContent = "NG";
-        message.textContent = "一致しません";
-
-        playNG();
-    }
-
-    setTimeout(resetScreen, 2000);
-
-});
-
-</script>
-
-</body>
-</html>
