@@ -4,8 +4,7 @@ const urlsToCache = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./service-worker.js",
-  "./html5-qrcode.min.js"
+  "./service-worker.js"
 ];
 
 self.addEventListener("install", event => {
