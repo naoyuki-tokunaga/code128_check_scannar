@@ -6,13 +6,6 @@
 
 <title>バーコード照合</title>
 
-<link rel="manifest" href="manifest.json">
-
-<meta name="theme-color" content="#4CAF50">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="バーコード照合">
-
 <style>
 
 body{
@@ -102,12 +95,12 @@ th,td{
 
 <div class="box">
 <h2>読取①</h2>
-<input id="scan1" autocomplete="off" inputmode="none">
+<input id="scan1" autocomplete="off">
 </div>
 
 <div class="box">
 <h2>読取②</h2>
-<input id="scan2" autocomplete="off" inputmode="none">
+<input id="scan2" autocomplete="off">
 </div>
 
 <div id="result" class="wait">
@@ -139,10 +132,6 @@ th,td{
 
 let historyList=[];
 
-/* ------------------------------
-   バーコード整形
------------------------------- */
-
 function normalizeBarcode(code){
 
     return String(code)
@@ -152,100 +141,75 @@ function normalizeBarcode(code){
         .trim();
 }
 
-function playOK(){
+function beep(freq,time){
 
     const ctx =
-        new (window.AudioContext ||
+    new(window.AudioContext ||
         window.webkitAudioContext)();
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.frequency.value = 1200;
-    osc.type = "sine";
+    osc.frequency.value = freq;
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
-    gain.gain.setValueAtTime(
-        0.2,
-        ctx.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        ctx.currentTime + 0.15
-    );
+    gain.gain.value = 0.2;
 
     osc.start();
 
-    osc.stop(
-        ctx.currentTime + 0.15
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        ctx.currentTime + time
     );
+
+    osc.stop(
+        ctx.currentTime + time
+    );
+}
+
+function playOK(){
+
+    beep(1200,0.15);
+
 }
 
 function playNG(){
 
-    const ctx =
-        new (window.AudioContext ||
-        window.webkitAudioContext)();
+    beep(250,0.5);
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.frequency.value = 250;
-    osc.type = "sawtooth";
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    gain.gain.setValueAtTime(
-        0.3,
-        ctx.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        ctx.currentTime + 0.5
-    );
-
-    osc.start();
-
-    osc.stop(
-        ctx.currentTime + 0.5
-    );
 }
 
 function checkMatch(){
 
     const scan1 =
-        normalizeBarcode(
-            document.getElementById("scan1").value
-        );
+    normalizeBarcode(
+        document.getElementById("scan1").value
+    );
 
     const scan2 =
-        normalizeBarcode(
-            document.getElementById("scan2").value
-        );
-
-    const result =
-        document.getElementById("result");
-
-    const status =
-        document.getElementById("status");
+    normalizeBarcode(
+        document.getElementById("scan2").value
+    );
 
     const isMatch =
-        scan2.includes(scan1);
+    scan2.includes(scan1);
+
+    const result =
+    document.getElementById("result");
+
+    const status =
+    document.getElementById("status");
 
     if(isMatch){
 
-        result.innerText="OK";
-        result.className="ok";
-
         document.body.className="ok";
 
-        status.innerText=
-        "一致しました";
+        result.className="ok";
+        result.innerText="OK";
+
+        status.innerText="一致しました";
 
         playOK();
 
@@ -262,13 +226,12 @@ function checkMatch(){
 
     }else{
 
-        result.innerText="NG";
-        result.className="ng";
-
         document.body.className="ng";
 
-        status.innerText=
-        "不一致です";
+        result.className="ng";
+        result.innerText="NG";
+
+        status.innerText="不一致です";
 
         playNG();
 
@@ -286,25 +249,25 @@ function checkMatch(){
 }
 
 function addHistory(
-    result,
-    scan1,
-    scan2
-){
+result,
+scan1,
+scan2){
 
     historyList.unshift({
 
-        time:
-        new Date()
+        time:new Date()
         .toLocaleTimeString(),
 
-        result,
-        scan1,
-        scan2
+        result:result,
+        scan1:scan1,
+        scan2:scan2
 
     });
 
-    if(historyList.length > 20){
+    if(historyList.length>20){
+
         historyList.pop();
+
     }
 
     renderHistory();
@@ -312,30 +275,29 @@ function addHistory(
 
 function renderHistory(){
 
-    let html=`
-    <tr>
+    let html=
+    `<tr>
         <th>時刻</th>
         <th>結果</th>
         <th>元①</th>
         <th>元②</th>
-    </tr>
-    `;
+    </tr>`;
 
     historyList.forEach(item=>{
 
         const color =
-            item.result==="OK"
-            ? "#ccffcc"
-            : "#ffcccc";
+        item.result==="OK"
+        ? "#ccffcc"
+        : "#ffcccc";
 
-        html += `
-        <tr style="background:${color}">
+        html +=
+        `<tr style="background:${color}">
             <td>${item.time}</td>
             <td>${item.result}</td>
             <td>${item.scan1}</td>
             <td>${item.scan2}</td>
-        </tr>
-        `;
+        </tr>`;
+
     });
 
     document.getElementById(
@@ -345,24 +307,35 @@ function renderHistory(){
 
 function resetScan(){
 
-    document.getElementById("scan1").value="";
-    document.getElementById("scan2").value="";
-
-    document.getElementById("result").innerText=
-    "読取待ち";
-
-    document.getElementById("result").className=
-    "wait";
-
     document.body.className="wait";
 
-    document.getElementById("status").innerText=
+    document.getElementById(
+        "scan1"
+    ).value="";
+
+    document.getElementById(
+        "scan2"
+    ).value="";
+
+    document.getElementById(
+        "result"
+    ).className="wait";
+
+    document.getElementById(
+        "result"
+    ).innerText="読取待ち";
+
+    document.getElementById(
+        "status"
+    ).innerText=
     "読取①をスキャンしてください";
 
-    document.getElementById("scan1").focus();
+    document.getElementById(
+        "scan1"
+    ).focus();
 }
 
-window.onload = () => {
+window.onload=function(){
 
     document.getElementById(
         "scan1"
@@ -371,7 +344,9 @@ window.onload = () => {
 };
 
 document.getElementById("scan1")
-.addEventListener("keydown",function(e){
+.addEventListener(
+"keydown",
+function(e){
 
     if(e.key!=="Enter"){
         return;
@@ -379,16 +354,21 @@ document.getElementById("scan1")
 
     e.preventDefault();
 
-    document.getElementById("status")
-    .innerText=
+    document.getElementById(
+        "status"
+    ).innerText=
     "読取②をスキャンしてください";
 
-    document.getElementById("scan2")
-    .focus();
+    document.getElementById(
+        "scan2"
+    ).focus();
+
 });
 
 document.getElementById("scan2")
-.addEventListener("keydown",function(e){
+.addEventListener(
+"keydown",
+function(e){
 
     if(e.key!=="Enter"){
         return;
@@ -399,48 +379,6 @@ document.getElementById("scan2")
     checkMatch();
 
 });
-
-document.body.addEventListener(
-"click",
-()=>{
-
-    if(
-        document.getElementById("scan1").value===""
-    ){
-        document.getElementById("scan1")
-        .focus();
-    }
-
-});
-
-</script>
-
-<script>
-
-if("serviceWorker" in navigator){
-
-    window.addEventListener(
-    "load",
-    ()=>{
-
-        navigator.serviceWorker
-        .register("./service-worker.js")
-        .then(()=>{
-
-            console.log(
-            "Service Worker登録完了"
-            );
-
-        })
-        .catch(err=>{
-
-            console.log(
-            "Service Workerエラー",
-            err
-            );
-        });
-    });
-}
 
 </script>
 
