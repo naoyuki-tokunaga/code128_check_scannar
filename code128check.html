@@ -17,9 +17,21 @@
 
 body{
     font-family:sans-serif;
-    background:#f5f5f5;
     text-align:center;
     padding:20px;
+    transition:background-color 0.2s;
+}
+
+body.wait{
+    background:#f5f5f5;
+}
+
+body.ok{
+    background:#4CAF50;
+}
+
+body.ng{
+    background:#E53935;
 }
 
 .box{
@@ -32,16 +44,22 @@ body{
 
 input{
     width:95%;
-    font-size:22px;
-    padding:10px;
+    font-size:24px;
+    padding:12px;
     text-align:center;
 }
 
+#status{
+    font-size:28px;
+    font-weight:bold;
+    margin-bottom:15px;
+}
+
 #result{
-    font-size:60px;
+    font-size:120px;
     font-weight:bold;
     border-radius:12px;
-    padding:20px;
+    padding:40px;
     margin-top:20px;
 }
 
@@ -68,39 +86,32 @@ th,td{
     border:1px solid #ccc;
     padding:6px;
     font-size:14px;
+    word-break:break-all;
 }
 
 </style>
 </head>
 
-<body>
+<body class="wait">
 
 <h1>バーコード照合</h1>
 
-<div class="box">
-
-<h2>読取①</h2>
-
-<input
-id="scan1"
-autocomplete="off">
-
+<div id="status">
+読取①をスキャンしてください
 </div>
 
 <div class="box">
+<h2>読取①</h2>
+<input id="scan1" autocomplete="off" inputmode="none">
+</div>
 
+<div class="box">
 <h2>読取②</h2>
-
-<input
-id="scan2"
-autocomplete="off">
-
+<input id="scan2" autocomplete="off" inputmode="none">
 </div>
 
 <div id="result" class="wait">
-
 読取待ち
-
 </div>
 
 <div class="box">
@@ -115,9 +126,7 @@ autocomplete="off">
 <th>時刻</th>
 <th>結果</th>
 <th>元①</th>
-<th>調整①</th>
 <th>元②</th>
-<th>調整②</th>
 </tr>
 
 </table>
@@ -130,65 +139,341 @@ autocomplete="off">
 
 let historyList=[];
 
-/* ---------------------
-   バーコード加工
---------------------- */
+/* ------------------------------
+   バーコード整形
+------------------------------ */
 
 function normalizeBarcode(code){
 
-    let original=String(code);
-
-    code=code
-    .replace(/\r/g,"")
-    .replace(/\n/g,"")
-    .replace(/\t/g,"")
-    .trim();
-
-    return{
-        original:original,
-        normalized:code
-    };
+    return String(code)
+        .replace(/\r/g,"")
+        .replace(/\n/g,"")
+        .replace(/\t/g,"")
+        .trim();
 }
 
-/* ---------------------
+/* ------------------------------
    OK音
---------------------- */
+------------------------------ */
 
 function playOK(){
 
-    const audioCtx=
-        new(window.AudioContext||
-             window.webkitAudioContext)();
+    const ctx =
+        new (window.AudioContext ||
+        window.webkitAudioContext)();
 
-    const osc=
-        audioCtx.createOscillator();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
 
-    const gain=
-        audioCtx.createGain();
-
-    osc.frequency.value=1200;
+    osc.frequency.value = 1200;
+    osc.type = "sine";
 
     osc.connect(gain);
-    gain.connect(audioCtx.destination);
+    gain.connect(ctx.destination);
 
     gain.gain.setValueAtTime(
         0.2,
-        audioCtx.currentTime
+        ctx.currentTime
     );
 
     gain.gain.exponentialRampToValueAtTime(
         0.001,
-        audioCtx.currentTime+0.15
+        ctx.currentTime + 0.15
     );
 
     osc.start();
 
     osc.stop(
-        audioCtx.currentTime+0.15
+        ctx.currentTime + 0.15
     );
 }
 
-/* ---------------------
+/* ------------------------------
    NG音
---------------------- */
+------------------------------ */
 
+function playNG(){
+
+    const ctx =
+        new (window.AudioContext ||
+        window.webkitAudioContext)();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.frequency.value = 250;
+    osc.type = "sawtooth";
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    gain.gain.setValueAtTime(
+        0.3,
+        ctx.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        ctx.currentTime + 0.5
+    );
+
+    osc.start();
+
+    osc.stop(
+        ctx.currentTime + 0.5
+    );
+}
+
+/* ------------------------------
+   照合処理
+------------------------------ */
+
+function checkMatch(){
+
+    const scan1 =
+        normalizeBarcode(
+            document.getElementById("scan1").value
+        );
+
+    const scan2 =
+        normalizeBarcode(
+            document.getElementById("scan2").value
+        );
+
+    const result =
+        document.getElementById("result");
+
+    const status =
+        document.getElementById("status");
+
+    const isMatch =
+        scan2.includes(scan1);
+
+    if(isMatch){
+
+        result.innerText="OK";
+        result.className="ok";
+
+        document.body.className="ok";
+
+        status.innerText=
+        "一致しました";
+
+        playOK();
+
+        addHistory(
+            "OK",
+            scan1,
+            scan2
+        );
+
+        setTimeout(
+            resetScan,
+            500
+        );
+
+    }else{
+
+        result.innerText="NG";
+        result.className="ng";
+
+        document.body.className="ng";
+
+        status.innerText=
+        "不一致です";
+
+        playNG();
+
+        addHistory(
+            "NG",
+            scan1,
+            scan2
+        );
+
+        setTimeout(
+            resetScan,
+            3000
+        );
+    }
+}
+
+/* ------------------------------
+   履歴
+------------------------------ */
+
+function addHistory(
+    result,
+    scan1,
+    scan2
+){
+
+    historyList.unshift({
+
+        time:
+        new Date()
+        .toLocaleTimeString(),
+
+        result,
+        scan1,
+        scan2
+
+    });
+
+    if(historyList.length > 20){
+        historyList.pop();
+    }
+
+    renderHistory();
+}
+
+function renderHistory(){
+
+    let html=`
+    <tr>
+        <th>時刻</th>
+        <th>結果</th>
+        <th>元①</th>
+        <th>元②</th>
+    </tr>
+    `;
+
+    historyList.forEach(item=>{
+
+        const color =
+            item.result==="OK"
+            ? "#ccffcc"
+            : "#ffcccc";
+
+        html += `
+        <tr style="background:${color}">
+            <td>${item.time}</td>
+            <td>${item.result}</td>
+            <td>${item.scan1}</td>
+            <td>${item.scan2}</td>
+        </tr>
+        `;
+    });
+
+    document.getElementById(
+        "historyTable"
+    ).innerHTML = html;
+}
+
+/* ------------------------------
+   リセット
+------------------------------ */
+
+function resetScan(){
+
+    document.getElementById("scan1").value="";
+    document.getElementById("scan2").value="";
+
+    document.getElementById("result").innerText=
+    "読取待ち";
+
+    document.getElementById("result").className=
+    "wait";
+
+    document.body.className="wait";
+
+    document.getElementById("status").innerText=
+    "読取①をスキャンしてください";
+
+    document.getElementById("scan1").focus();
+}
+
+/* ------------------------------
+   Bluetoothスキャナ
+------------------------------ */
+
+window.onload = () => {
+
+    document.getElementById(
+        "scan1"
+    ).focus();
+
+};
+
+document.getElementById("scan1")
+.addEventListener("keydown",function(e){
+
+    if(e.key!=="Enter"){
+        return;
+    }
+
+    e.preventDefault();
+
+    document.getElementById("status")
+    .innerText=
+    "読取②をスキャンしてください";
+
+    document.getElementById("scan2")
+    .focus();
+});
+
+document.getElementById("scan2")
+.addEventListener("keydown",function(e){
+
+    if(e.key!=="Enter"){
+        return;
+    }
+
+    e.preventDefault();
+
+    checkMatch();
+
+});
+
+document.body.addEventListener(
+"click",
+()=>{
+
+    if(
+        document.getElementById("scan1").value===""
+    ){
+        document.getElementById("scan1")
+        .focus();
+    }
+
+});
+
+</script>
+
+<script>
+
+/* ------------------------------
+   Service Worker登録
+------------------------------ */
+
+if("serviceWorker" in navigator){
+
+    window.addEventListener(
+    "load",
+    ()=>{
+
+        navigator.serviceWorker
+        .register("./service-worker.js")
+        .then(()=>{
+
+            console.log(
+            "Service Worker登録完了"
+            );
+
+        })
+        .catch(err=>{
+
+            console.log(
+            "Service Workerエラー",
+            err
+            );
+
+        });
+
+    });
+
+}
+
+</script>
+
+</body>
+</html>
